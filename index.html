@@ -421,7 +421,7 @@ th { background:#f8fafc; position:sticky; top:0; z-index:1; }
           <label><input type="checkbox" id="perm_excluir"> Excluir produto</label>
         </div>
         <div class="actions">
-          <button class="btn-primary" onclick="salvarPermissoesLimitado()">Salvar permissões</button>
+          <button class="btn-primary" type="button" onclick="salvarPermissoesLimitado()">Salvar permissões</button>
         </div>
         <div class="footer-note">Somente o master altera as permissões do login limitado.</div>
       </div>
@@ -566,7 +566,7 @@ const firebaseConfig = {
 const ESTOQUE_INICIAL = {"078908-BEGE": {"44": 74, "46": 68, "48": 49, "50": 57, "52": 42, "54": 57}, "078908-PRETO": {"44": 84, "46": 91, "48": 72, "50": 71, "52": 40, "54": 51}, "061383-PRETO": {"44": 29, "46": 30, "48": 32, "50": 20, "52": 34, "54": 33}, "061383-BEGE": {"44": 29, "46": 42, "48": 23, "50": 16, "52": 18, "54": 19}, "061385-PRETO": {"44": 66, "46": 40, "48": 42, "50": 63, "52": 43, "54": 86}, "061385-LAVANDA": {"44": 40, "46": 48, "48": 43, "50": 28, "52": 30, "54": 30}, "061196-PRETO": {"44": 40, "46": 40, "48": 40, "50": 40, "52": 40, "54": 40}, "061196-BEGE": {"44": 40, "46": 40, "48": 40, "50": 37, "52": 41, "54": 42}, "061486-BEGE": {"44": 20, "46": 20, "48": 20, "50": 20, "52": 26, "54": 0}, "061486-PRETO": {"44": 24, "46": 24, "48": 24, "50": 24, "52": 24}, "064237-PRETO": {"44": 16, "46": 16, "48": 16, "50": 16, "52": 15}, "064237-VERMELHO": {"44": 14, "46": 13, "48": 14, "50": 14, "52": 13}, "061100-PRETO": {"42": 14, "44": 14, "46": 12, "48": 14, "50": 13, "52": 15}, "061100-BEGE": {"42": 16, "44": 16, "46": 15, "48": 16, "50": 14, "52": 10}, "094223-PRETO": {"ME": 4, "PE": 4, "GR": 4, "XG": 4, "EG": 4}, "094223-BEGE": {"ME": 6, "PE": 6, "GR": 6, "XG": 6, "EG": 5}, "064905-PRETO": {"44": 4, "46": 4, "48": 4, "50": 4, "52": 4, "54": 0}, "064905-BEGE": {"44": 6, "46": 6, "48": 6, "50": 6, "52": 4, "54": 0}, "061818-PRETO": {"44": 12, "46": 13, "48": 13, "50": 10, "52": 14, "54": 0}, "061818-BEGE": {"44": 16, "46": 16, "48": 16, "50": 16, "52": 11, "54": 0}, "056095-PRETO": {"PE": 14, "ME": 14, "XG": 15, "GR": 10, "EG": 11}, "056095-BEGE": {"PE": 15, "ME": 16, "XG": 16, "GR": 15, "EG": 23}, "057487-PRETO": {"ME": 14, "XG": 13, "GR": 14, "EG": 14}, "057487-BEGE": {"ME": 16, "XG": 17, "GR": 14, "EG": 15}, "094230-BEGE": {"GR": 16, "EG": 16, "XG": 16, "PE": 16, "ME": 16}, "094230-PRETO": {"PE": 14, "ME": 14, "XG": 14, "EG": 14, "GR": 14}, "061004-BEGE": {"54": 40, "50": 41, "52": 40, "48": 41, "46": 43, "44": 22}, "061004-PRETO": {"54": 40, "52": 40, "50": 39, "48": 40, "46": 20, "44": 42}, "067858-PRETO": {"48": 10, "50": 10, "46": 10, "44": 10, "42": 10}, "067858-BEGE": {"50": 10, "48": 10, "46": 10, "44": 10, "42": 10}};
 const USUARIOS_PADRAO = [
   { nome: "Denis", login: "denis", senha: "999999", perfil: "master" },
-  { nome: "Leonardo", login: "juvencio", senha: "123456", perfil: "limitado" }
+  { nome: "Juvencio", login: "juvencio", senha: "123456", perfil: "limitado" }
 ];
 
 const PERMISSOES_LIMITADO_PADRAO = {
@@ -604,6 +604,13 @@ let cameraInterval = null;
 let lastCameraCode = "";
 let lastCameraTs = 0;
 let permissoesLimitado = { ...PERMISSOES_LIMITADO_PADRAO };
+const LS_PERMISSOES_KEY = "galpao27_permissoes_limitado";
+try {
+  const salvo = JSON.parse(localStorage.getItem(LS_PERMISSOES_KEY) || "null");
+  if (salvo && typeof salvo === "object") {
+    permissoesLimitado = { ...PERMISSOES_LIMITADO_PADRAO, ...salvo };
+  }
+} catch(e) {}
 
 const refs = {
   estoque: collection(db, "estoque"),
@@ -777,10 +784,21 @@ async function salvarPermissoesLimitado() {
     const el = document.getElementById(`perm_${chave}`);
     novas[chave] = !!(el && el.checked);
   });
+
   permissoesLimitado = { ...PERMISSOES_LIMITADO_PADRAO, ...novas };
-  await setDoc(refs.configPermissoes, permissoesLimitado, { merge: true });
-  aplicarPermissoesVisuais();
-  alert("Permissões do login limitado atualizadas.");
+  try {
+    localStorage.setItem(LS_PERMISSOES_KEY, JSON.stringify(permissoesLimitado));
+  } catch (e) {}
+
+  try {
+    await setDoc(refs.configPermissoes, permissoesLimitado, { merge: true });
+    aplicarPermissoesVisuais();
+    alert("Permissões do login limitado salvas com sucesso.");
+  } catch (error) {
+    console.error("Erro ao salvar permissões:", error);
+    aplicarPermissoesVisuais();
+    alert("Permissões salvas localmente neste navegador. Verifique as regras do Firestore para sincronizar entre dispositivos.");
+  }
 }
 
 window.entrarSistema = function() {
@@ -798,7 +816,7 @@ window.entrarSistema = function() {
   if (login === "denis" && senha === "999999") {
     encontrado = { nome: "Denis", login: "denis", perfil: "master" };
   } else if (login === "juvencio" && senha === "123456") {
-    encontrado = { nome: "Leonardo", login: "juvencio", perfil: "limitado" };
+    encontrado = { nome: "Juvencio", login: "juvencio", perfil: "limitado" };
   } else {
     const usuariosDisponiveis = usuariosMap && usuariosMap.size
       ? Array.from(usuariosMap.values())
@@ -1721,14 +1739,25 @@ onSnapshot(refs.skus, (snap) => {
 onSnapshot(refs.configPermissoes, (snap) => {
   if (snap.exists()) {
     permissoesLimitado = { ...PERMISSOES_LIMITADO_PADRAO, ...(snap.data() || {}) };
+    try { localStorage.setItem(LS_PERMISSOES_KEY, JSON.stringify(permissoesLimitado)); } catch(e) {}
   } else {
-    permissoesLimitado = { ...PERMISSOES_LIMITADO_PADRAO };
+    try {
+      const salvo = JSON.parse(localStorage.getItem(LS_PERMISSOES_KEY) || "null");
+      permissoesLimitado = { ...PERMISSOES_LIMITADO_PADRAO, ...(salvo || {}) };
+    } catch (e) {
+      permissoesLimitado = { ...PERMISSOES_LIMITADO_PADRAO };
+    }
   }
   atualizarCheckboxPermissoes();
   aplicarPermissoesVisuais();
 }, (error) => {
   console.error("Erro snapshot permissões:", error);
-  permissoesLimitado = { ...PERMISSOES_LIMITADO_PADRAO };
+  try {
+    const salvo = JSON.parse(localStorage.getItem(LS_PERMISSOES_KEY) || "null");
+    permissoesLimitado = { ...PERMISSOES_LIMITADO_PADRAO, ...(salvo || {}) };
+  } catch (e) {
+    permissoesLimitado = { ...PERMISSOES_LIMITADO_PADRAO };
+  }
   atualizarCheckboxPermissoes();
   aplicarPermissoesVisuais();
 });
